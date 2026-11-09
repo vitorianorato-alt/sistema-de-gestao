@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestão de Equipamentos</title>
+    <link rel="icon" type="image/png" href="./image/logocolegio.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!--LOGIN-->
+    <section id="login-container" class="login-container" hidden>
+        <form id="form-login" class="login-card" novalidate>
+            <h1>Gestão de Equipamentos</h1>
+            <div id="login-erro" class="error-alert" role="alert" hidden></div>
+            <div class="input-container">
+                <label for="login-id">Usuário ou e-mail</label>
+                <input id="login-id" name="id" type="text" autocomplete="username" required>
+            </div>
+            <div class="input-container">
+                <label for="login-senha">Senha</label>
+                <input id="login-senha" name="senha" type="password" autocomplete="current-password" required>
+            </div>
+            <div class="input-container">
+                <button class="btn btn-primario btn-block" type="submit">Entrar</button>
+            </div>
+        </form>
+    </section>
+
+    <!--SIDEBAR-->
+    <div id="sidebar-container" class="sidebar-container" hidden>
+        <div class="brand-container">
+            <img src="./image/logocolegio.png" alt="Logo do colégio">
+            <span>Mendes Gonçalves</span>
+        </div>
+        <div id="nav-container" class="nav-container">
+            <nav id="nav-menu" class="nav-menu" aria-label="Menu principal">
+                <div class="main-container">
+                    <a href="#/dashboard" data-rota="dashboard">Dashboard</a>
+                    <a href="#/equipamentos" data-rota="equipamentos">Equipamentos</a>
+                    <a href="#/setores" data-rota="setores">Setores</a>
+                    <a href="#/usuarios" data-rota="usuarios" data-admin>Usuários</a>
+                </div>
+                <div class="relatorio-container">
+                    <span class="relatorio-title">Relatórios</span>
+                    <a href="#/rel-equipamentos" data-rota="rel-equipamentos">Equipamentos</a>
+                    <a href="#/rel-setores" data-rota="rel-setores">Setores</a>
+                </div>
+            </nav>
+        </div>
+        <div class="sair-container">
+            <span id="sidebar-usuario" class="sidebar-usuario"></span>
+            <a href="#/sair" class="btn-sair">Sair</a>
+        </div>
+    </div>
+
+    <!--HEADER-->
+    <div id="header-container" class="header-container" hidden>
+        <header id="top-bar" class="top-bar">
+            <button type="button" id="btn-menu" class="btn-menu" aria-label="Abrir menu">☰</button>
+            <h2 id="titulo-pagina"></h2>
+        </header>
+    </div>
+
+    <!--ALERT-->
+    <div id="alert-system" class="alert-system" role="alert" hidden></div>
+
+    <!--Modal: reativar / excluir-->
+    <dialog id="dialog-acao" class="dialog-modal" aria-labelledby="acao-titulo">
+        <form id="form-acao">
+            <div class="dialog-topo">
+                <h3 id="acao-titulo"></h3>
+                <button type="button" id="btn-fechar-acao" class="dialog-fechar" aria-label="Fechar">✕</button>
+            </div>
+
+            <p id="acao-aviso" class="contador" hidden>Esta exclusão é permanente e não pode ser desfeita. Apenas o registro no histórico de alterações permanece.</p>
+
+            <div class="form-grid">
+                <div class="input-container campo-largo">
+                    <label for="acao-justificativa">Justificativa *</label>
+                    <textarea id="acao-justificativa" name="justificativa" rows="3" required></textarea>
+                </div>
+            </div>
+
+            <div class="dialog-acoes">
+                <button type="button" id="btn-cancelar-acao" class="btn btn-secundario">Cancelar</button>
+                <button type="submit" id="btn-confirmar-acao" class="btn btn-primario">Confirmar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!--DASHBOARD-->
+    <section id="dashboard-container" class="dashboard-container" hidden>
+        <div id="card-container" class="card-container">
+            <div class="card-info">
+                <div id="num-equipamentos" class="number">
+                    <span>0</span>
+                </div>
+                <span>Equipamentos</span>
+            </div>
+            <div class="card-info">
+                <div id="num-setores" class="number">
+                    <span>0</span>
+                </div>
+                <span>Setores ativos</span>
+            </div>
+            <div class="card-info">
+                <div id="num-disponiveis" class="number">
+                    <span>0</span>
+                </div>
+                <span>Disponíveis</span>
+            </div>
+            <div class="card-info">
+                <div id="num-manutencao" class="number">
+                    <span>0</span>
+                </div>
+                <span>Em manutenção</span>
+            </div>
+            <div class="card-info">
+                <div id="num-defeituoso" class="number">
+                    <span>0</span>
+                </div>
+                <span>Defeituosos</span>
+            </div>
+        </div>
+
+        <div id="grafic-container" class="grafic-container">
+            <div class="grafic-card">
+                <h3>Equipamentos por status</h3>
+                <div class="grafic-canvas">
+                    <canvas id="grafico-status"></canvas>
+                </div>
+            </div>
+            <div class="grafic-card">
+                <h3>Equipamentos por setor</h3>
+                <div class="grafic-canvas">
+                    <canvas id="grafico-setores"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="alteracoes-container" class="alteracoes-container">
+            <h3>Últimas alterações</h3>
+            <div class="tabela-wrapper">
+                <table class="tabela-alteracoes">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Nome</th>
+                            <th>Ação</th>
+                            <th>De</th>
+                            <th>Para</th>
+                            <th>Justificativa</th>
+                            <th>Usuário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alteracoes-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!--EQUIPAMENTOS-->
+    <section id="equipamentos-container" class="equipamentos-container" hidden>
+        <div class="equipamentos-painel">
+            <div class="filtros-container">
+                <div class="filtro-campo">
+                    <label for="filtro-busca">Buscar</label>
+                    <input id="filtro-busca" type="search" placeholder="Nome, patrimônio, marca, série...">
+                </div>
+                <div class="filtro-campo">
+                    <label for="filtro-setor">Setor</label>
+                    <select id="filtro-setor">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filtro-campo">
+                    <label for="filtro-categoria">Categoria</label>
+                    <select id="filtro-categoria">
+                        <option value="">Todas</option>
+                        <option>Computador</option>
+                        <option>Monitor</option>
+                        <option>Projetor</option>
+                        <option>Impressora</option>
+                        <option>Rede</option>
+                        <option>Periférico</option>
+                    </select>
+                </div>
+                <div class="filtro-campo">
+                    <label for="filtro-situacao">Situação</label>
+                    <select id="filtro-situacao">
+                        <option value="">Todas</option>
+                        <option>Disponível</option>
+                        <option>Em utilização</option>
+                        <option>Em manutenção</option>
+                        <option>Defeituoso</option>
+                        <option>Inativo</option>
+                        <option>Baixado do patrimônio</option>
+                    </select>
+                </div>
+                <label class="filtro-check">
+                    <input id="filtro-desativados" type="checkbox">
+                    Mostrar desativados
+                </label>
+                <button type="button" id="btn-novo-equipamento" class="btn btn-primario">+ Novo equipamento</button>
+            </div>
+
+            <p id="equipamentos-contador" class="contador" aria-live="polite"></p>
+
+            <div class="tabela-wrapper">
+                <table class="tabela-equipamentos">
+                    <thead>
+                        <tr>
+                            <th>Patrimônio</th>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Setor</th>
+                            <th>Situação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipamentos-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!--Modal: novo equipamento-->
+        <dialog id="dialog-equipamento" class="dialog-modal" aria-labelledby="dialog-equipamento-titulo">
+            <form id="form-equipamento">
+                <div class="dialog-topo">
+                    <h3 id="dialog-equipamento-titulo">Novo equipamento</h3>
+                    <button type="button" id="btn-fechar-equipamento" class="dialog-fechar"
+                        aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container">
+                        <label for="eq-patrimonio">Nº de patrimônio</label>
+                        <input id="eq-patrimonio" name="patrimonio" type="text">
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-nome">Nome *</label>
+                        <input id="eq-nome" name="nome" type="text" required>
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-categoria">Categoria *</label>
+                        <select id="eq-categoria" name="categoria" required>
+                            <option value="">Selecione…</option>
+                            <option>Computador</option>
+                            <option>Monitor</option>
+                            <option>Projetor</option>
+                            <option>Impressora</option>
+                            <option>Rede</option>
+                            <option>Periférico</option>
+                        </select>
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-setor">Setor *</label>
+                        <select id="eq-setor" name="setor" required>
+                            <option value="">Selecione…</option>
+                        </select>
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-marca">Marca</label>
+                        <input id="eq-marca" name="marca" type="text">
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-modelo">Modelo</label>
+                        <input id="eq-modelo" name="modelo" type="text">
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-serie">Nº de série</label>
+                        <input id="eq-serie" name="serie" type="text">
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-aquisicao">Data de aquisição</label>
+                        <input id="eq-aquisicao" name="aquisicao" type="date">
+                    </div>
+                    <div class="input-container">
+                        <label for="eq-situacao">Situação *</label>
+                        <select id="eq-situacao" name="situacao" required>
+                            <option>Disponível</option>
+                            <option>Em utilização</option>
+                            <option>Em manutenção</option>
+                            <option>Defeituoso</option>
+                            <option>Inativo</option>
+                            <option>Baixado do patrimônio</option>
+                        </select>
+                    </div>
+                    <div class="input-container campo-largo">
+                        <label for="eq-observacoes">Observações</label>
+                        <textarea id="eq-observacoes" name="observacoes" rows="3"></textarea>
+                    </div>
+                    <div id="eq-justificativa-container" class="input-container campo-largo" hidden>
+                        <label for="eq-justificativa">Justificativa da alteração *</label>
+                        <textarea id="eq-justificativa" name="justificativa" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-equipamento" class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Salvar</button>
+                </div>
+            </form>
+        </dialog>
+
+        <!--Modal: detalhes do equipamento-->
+        <dialog id="dialog-detalhes-equipamento" class="dialog-modal" aria-labelledby="dialog-detalhes-titulo">
+            <div id="area-impressao-equipamento">
+                <div class="dialog-topo">
+                    <h3 id="dialog-detalhes-titulo">Detalhes do equipamento</h3>
+                    <button type="button" id="btn-fechar-detalhes" class="dialog-fechar" aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container">
+                        <span>Nº de patrimônio</span>
+                        <strong id="det-patrimonio"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Nome</span>
+                        <strong id="det-nome"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Categoria</span>
+                        <strong id="det-categoria"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Setor</span>
+                        <strong id="det-setor"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Marca</span>
+                        <strong id="det-marca"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Modelo</span>
+                        <strong id="det-modelo"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Nº de série</span>
+                        <strong id="det-serie"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Data de aquisição</span>
+                        <strong id="det-aquisicao"></strong>
+                    </div>
+                    <div class="input-container">
+                        <span>Situação</span>
+                        <strong id="det-situacao"></strong>
+                    </div>
+                    <div class="input-container campo-largo">
+                        <span>Observações</span>
+                        <strong id="det-observacoes"></strong>
+                    </div>
+                </div>
+
+                <h4>Histórico de alterações</h4>
+                <div class="tabela-wrapper">
+                    <table class="tabela-alteracoes">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Cargo</th>
+                                <th>Justificativa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="det-historico"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dialog-acoes">
+                <button type="button" id="btn-imprimir-detalhes" class="btn btn-contorno">
+                    <span aria-hidden="true">🖨️</span> Imprimir
+                </button>
+                <button type="button" id="btn-editar-detalhes" class="btn btn-primario">Editar</button>
+                <button type="button" id="btn-desativar-detalhes" class="btn btn-secundario">Desativar</button>
+            </div>
+        </dialog>
+
+        <!--Modal: desativar equipamento-->
+        <dialog id="dialog-desativar-equipamento" class="dialog-modal"
+            aria-labelledby="dialog-desativar-equipamento-titulo">
+            <form id="form-desativar-equipamento">
+                <div class="dialog-topo">
+                    <h3 id="dialog-desativar-equipamento-titulo">Desativar equipamento</h3>
+                    <button type="button" id="btn-fechar-desativar-equipamento" class="dialog-fechar"
+                        aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container campo-largo">
+                        <label for="dv-eq-justificativa">Justificativa *</label>
+                        <textarea id="dv-eq-justificativa" name="justificativa" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-desativar-equipamento"
+                        class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Desativar</button>
+                </div>
+            </form>
+        </dialog>
+    </section>
+
+    <!--SETORES-->
+    <section id="setores-container" class="setores-container" hidden>
+        <div class="setores-painel">
+            <div class="painel-topo">
+                <p id="setores-contador" class="contador" aria-live="polite"></p>
+                <button type="button" id="btn-novo-setor" class="btn btn-primario">+ Novo setor</button>
+            </div>
+
+            <div class="tabela-wrapper">
+                <table class="tabela-equipamentos">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Localização</th>
+                            <th>Responsável</th>
+                            <th>Equipamentos</th>
+                            <th>Situação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="setores-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!--Modal: novo setor-->
+        <dialog id="dialog-setor" class="dialog-modal" aria-labelledby="dialog-setor-titulo">
+            <form id="form-setor">
+                <div class="dialog-topo">
+                    <h3 id="dialog-setor-titulo">Novo setor</h3>
+                    <button type="button" id="btn-fechar-setor" class="dialog-fechar" aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container campo-largo">
+                        <label for="st-nome">Nome *</label>
+                        <input id="st-nome" name="nome" type="text" required>
+                    </div>
+                    <div class="input-container campo-largo">
+                        <label for="st-descricao">Descrição</label>
+                        <textarea id="st-descricao" name="descricao" rows="3"></textarea>
+                    </div>
+                    <div class="input-container">
+                        <label for="st-localizacao">Localização física</label>
+                        <input id="st-localizacao" name="localizacao" type="text" placeholder="Ex.: Bloco A, 2º andar">
+                    </div>
+                    <div class="input-container">
+                        <label for="st-responsavel">Responsável (se aplicável)</label>
+                        <input id="st-responsavel" name="responsavel" type="text">
+                    </div>
+                    <div id="st-justificativa-container" class="input-container campo-largo" hidden>
+                        <label for="st-justificativa">Justificativa da alteração *</label>
+                        <textarea id="st-justificativa" name="justificativa" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-setor" class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Salvar</button>
+                </div>
+            </form>
+        </dialog>
+
+        <!--Modal: desativar setor-->
+        <dialog id="dialog-desativar-setor" class="dialog-modal" aria-labelledby="dialog-desativar-setor-titulo">
+            <form id="form-desativar-setor">
+                <div class="dialog-topo">
+                    <h3 id="dialog-desativar-setor-titulo">Desativar setor</h3>
+                    <button type="button" id="btn-fechar-desativar-setor" class="dialog-fechar"
+                        aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container campo-largo">
+                        <label for="dv-st-justificativa">Justificativa *</label>
+                        <textarea id="dv-st-justificativa" name="justificativa" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-desativar-setor" class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Desativar</button>
+                </div>
+            </form>
+        </dialog>
+    </section>
+
+    <!--USUÁRIOS-->
+    <section id="usuarios-container" class="usuarios-container" hidden>
+        <div class="usuarios-painel">
+            <div class="painel-topo">
+                <p id="usuarios-contador" class="contador" aria-live="polite"></p>
+                <button type="button" id="btn-novo-usuario" class="btn btn-primario">+ Novo usuário</button>
+            </div>
+
+            <div class="tabela-wrapper">
+                <table class="tabela-equipamentos">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Perfil</th>
+                            <th>Situação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usuarios-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!--Modal: novo usuário-->
+        <dialog id="dialog-usuario" class="dialog-modal" aria-labelledby="dialog-usuario-titulo">
+            <form id="form-usuario">
+                <div class="dialog-topo">
+                    <h3 id="dialog-usuario-titulo">Novo usuário</h3>
+                    <button type="button" id="btn-fechar-usuario" class="dialog-fechar" aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container">
+                        <label for="us-nome">Nome *</label>
+                        <input id="us-nome" name="nome" type="text" required>
+                    </div>
+                    <div class="input-container">
+                        <label for="us-usuario">Usuário (login) *</label>
+                        <input id="us-usuario" name="usuario" type="text" autocomplete="off" required>
+                    </div>
+                    <div class="input-container">
+                        <label for="us-email">E-mail *</label>
+                        <input id="us-email" name="email" type="email" autocomplete="off" required>
+                    </div>
+                    <div class="input-container">
+                        <label for="us-perfil">Perfil *</label>
+                        <select id="us-perfil" name="perfil" required>
+                            <option value="">Selecione…</option>
+                            <option>Administrador</option>
+                            <option>Operador</option>
+                            <option>Consulta</option>
+                        </select>
+                    </div>
+                    <div class="input-container">
+                        <label for="us-senha">Senha * (mín. 6 caracteres)</label>
+                        <input id="us-senha" name="senha" type="password" minlength="6" autocomplete="new-password"
+                            required>
+                    </div>
+                    <div id="us-justificativa-container" class="input-container campo-largo" hidden>
+                        <label for="us-justificativa">Justificativa da alteração *</label>
+                        <textarea id="us-justificativa" name="justificativa" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-usuario" class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Salvar</button>
+                </div>
+            </form>
+        </dialog>
+
+        <!--Modal: desativar usuário-->
+        <dialog id="dialog-desativar-usuario" class="dialog-modal" aria-labelledby="dialog-desativar-usuario-titulo">
+            <form id="form-desativar-usuario">
+                <div class="dialog-topo">
+                    <h3 id="dialog-desativar-usuario-titulo">Desativar usuário</h3>
+                    <button type="button" id="btn-fechar-desativar-usuario" class="dialog-fechar"
+                        aria-label="Fechar">✕</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="input-container campo-largo">
+                        <label for="dv-us-justificativa">Justificativa *</label>
+                        <textarea id="dv-us-justificativa" name="justificativa" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <div class="dialog-acoes">
+                    <button type="button" id="btn-cancelar-desativar-usuario"
+                        class="btn btn-secundario">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Desativar</button>
+                </div>
+            </form>
+        </dialog>
+    </section>
+
+    <!--RELATÓRIOS-->
+    <section id="equipamentos-relatorio-container" class="equipamentos-relatorio-container" hidden>
+        <div class="relatorio-painel">
+            <div class="filtros-container">
+                <div class="filtro-campo">
+                    <label for="rel-eq-busca">Buscar</label>
+                    <input id="rel-eq-busca" type="search" placeholder="Nome, patrimônio, marca, série...">
+                </div>
+                <div class="filtro-campo">
+                    <label for="rel-eq-setor">Setor</label>
+                    <select id="rel-eq-setor">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filtro-campo">
+                    <label for="rel-eq-categoria">Categoria</label>
+                    <select id="rel-eq-categoria">
+                        <option value="">Todas</option>
+                        <option>Computador</option>
+                        <option>Monitor</option>
+                        <option>Projetor</option>
+                        <option>Impressora</option>
+                        <option>Rede</option>
+                        <option>Periférico</option>
+                    </select>
+                </div>
+                <div class="filtro-campo">
+                    <label for="rel-eq-situacao">Situação</label>
+                    <select id="rel-eq-situacao">
+                        <option value="">Todas</option>
+                        <option>Disponível</option>
+                        <option>Em utilização</option>
+                        <option>Em manutenção</option>
+                        <option>Defeituoso</option>
+                        <option>Inativo</option>
+                        <option>Baixado do patrimônio</option>
+                    </select>
+                </div>
+                <label class="filtro-check">
+                    <input id="rel-eq-desativados" type="checkbox">
+                    Mostrar desativados
+                </label>
+                <button type="button" id="btn-exportar-csv" class="btn btn-contorno">
+                    <span aria-hidden="true">⬇️</span> Exportar CSV
+                </button>
+                <button type="button" id="btn-imprimir-equipamentos" class="btn btn-contorno">
+                    <span aria-hidden="true">🖨️</span> Imprimir / PDF
+                </button>
+            </div>
+
+            <div class="resumo-container" aria-live="polite">
+                <div class="resumo-card resumo-total">
+                    <strong id="rel-eq-total">0</strong>
+                    <span>Total listado</span>
+                </div>
+                <div class="resumo-card resumo-disponiveis">
+                    <strong id="rel-eq-disponiveis">0</strong>
+                    <span>Disponíveis</span>
+                </div>
+                <div class="resumo-card resumo-manutencao">
+                    <strong id="rel-eq-manutencao">0</strong>
+                    <span>Em manutenção</span>
+                </div>
+                <div class="resumo-card resumo-defeituosos">
+                    <strong id="rel-eq-defeituosos">0</strong>
+                    <span>Defeituosos</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relatorio-painel">
+            <div class="tabela-wrapper">
+                <table class="tabela-equipamentos">
+                    <thead>
+                        <tr>
+                            <th>Patrimônio</th>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Marca / Modelo</th>
+                            <th>Série</th>
+                            <th>Setor</th>
+                            <th>Aquisição</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rel-eq-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    <section id="setores-relatorio-container" class="setores-relatorio-container" hidden>
+        <div class="relatorio-painel">
+            <div class="relatorio-topo">
+                <h3>Equipamentos por setor</h3>
+                <div class="relatorio-acoes">
+                    <button type="button" id="btn-exportar-csv-setores" class="btn btn-contorno">
+                        <span aria-hidden="true">⬇️</span> Exportar CSV
+                    </button>
+                    <button type="button" id="btn-imprimir-setores" class="btn btn-contorno">
+                        <span aria-hidden="true">🖨️</span> Imprimir / PDF
+                    </button>
+                </div>
+            </div>
+
+            <p class="contador">Total geral: <span id="rel-st-total-geral">0</span></p>
+
+            <div class="tabela-wrapper">
+                <table class="tabela-equipamentos tabela-rel-setores">
+                    <thead>
+                        <tr>
+                            <th>Setor</th>
+                            <th>Localização</th>
+                            <th>Total</th>
+                            <th>Disponível</th>
+                            <th>Em uso</th>
+                            <th>Manutenção</th>
+                            <th>Defeituoso</th>
+                            <th>Outros</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rel-st-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="relatorio-grid-duplo">
+            <div class="relatorio-painel">
+                <h3>Distribuição por categoria</h3>
+                <div id="rel-st-categorias" class="barras-lista">
+                    <div class="barra-linha" data-categoria="Computador">
+                        <span class="barra-rotulo">Computador</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-categoria="Monitor">
+                        <span class="barra-rotulo">Monitor</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-categoria="Projetor">
+                        <span class="barra-rotulo">Projetor</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-categoria="Impressora">
+                        <span class="barra-rotulo">Impressora</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-categoria="Rede">
+                        <span class="barra-rotulo">Rede</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-categoria="Periférico">
+                        <span class="barra-rotulo">Periférico</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relatorio-painel">
+                <h3>Distribuição por situação</h3>
+                <div id="rel-st-situacoes" class="barras-lista">
+                    <div class="barra-linha" data-situacao="Disponível">
+                        <span class="barra-rotulo">Disponível</span>
+                        <div class="barra-trilho"><div class="barra-preenchida barra-verde"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-situacao="Em utilização">
+                        <span class="barra-rotulo">Em utilização</span>
+                        <div class="barra-trilho"><div class="barra-preenchida"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-situacao="Em manutenção">
+                        <span class="barra-rotulo">Em manutenção</span>
+                        <div class="barra-trilho"><div class="barra-preenchida barra-amarela"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-situacao="Defeituoso">
+                        <span class="barra-rotulo">Defeituoso</span>
+                        <div class="barra-trilho"><div class="barra-preenchida barra-vermelha"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-situacao="Inativo">
+                        <span class="barra-rotulo">Inativo</span>
+                        <div class="barra-trilho"><div class="barra-preenchida barra-cinza"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                    <div class="barra-linha" data-situacao="Baixado do patrimônio">
+                        <span class="barra-rotulo">Baixado do patrimônio</span>
+                        <div class="barra-trilho"><div class="barra-preenchida barra-cinza"></div></div>
+                        <strong class="barra-valor">0</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relatorio-painel">
+            <h3>Setores com mais equipamentos em manutenção ou defeituosos</h3>
+            <div id="rel-st-criticos" class="barras-lista"></div>
+        </div>
+    </section>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="./js/login.js"></script>
+    <script src="./js/aplication.js"></script>
+    <script src="./js/sistema.js"></script>
+</body>
+
+</html>
